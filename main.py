@@ -13,7 +13,7 @@ URL = "https://note.com/metacre/all?sort=latest"
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_FILE = os.path.join(BASE_DIR, "data.json")
-HTML_FILE = os.path.join(BASE_DIR, "output.html")
+HTML_FILE = os.path.join(BASE_DIR, "index.html")
 
 WEBHOOK_URL = "https://discord.com/api/webhooks/1484779516940390490/iPp51c5IpqIv5u1mGA_XpmtuuN_WzLVgyBi70mvGrBBB_0P7RBt1aD2un0ienzJLbGbI"
 
