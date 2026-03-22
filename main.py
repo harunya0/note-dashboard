@@ -6,31 +6,32 @@ from selenium.webdriver.support import expected_conditions as EC
 import time
 import json
 import os
-import urllib.parse
 import requests
+import subprocess
 
+# ===== 設定 =====
 URL = "https://note.com/metacre/all?sort=latest"
+GITHUB_URL = "https://harunya0.github.io/note-dashboard/"
+WEBHOOK_URL = "https://discord.com/api/webhooks/1484779516940390490/iPp51c5IpqIv5u1mGA_XpmtuuN_WzLVgyBi70mvGrBBB_0P7RBt1aD2un0ienzJLbGbI"
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_FILE = os.path.join(BASE_DIR, "data.json")
 HTML_FILE = os.path.join(BASE_DIR, "index.html")
 
-WEBHOOK_URL = "https://discord.com/api/webhooks/1484779516940390490/iPp51c5IpqIv5u1mGA_XpmtuuN_WzLVgyBi70mvGrBBB_0P7RBt1aD2un0ienzJLbGbI"
 
-
+# ===== Chrome =====
 def create_driver():
     options = Options()
     options.add_argument("--headless=new")
     options.add_argument("--disable-gpu")
     options.add_argument("--window-size=1920,1080")
-    options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--log-level=3")
 
     return webdriver.Chrome(options=options)
 
 
+# ===== データ =====
 def load_old_data():
     if not os.path.exists(DATA_FILE):
         return []
@@ -46,6 +47,7 @@ def save_data(data):
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 
+# ===== もっとみる =====
 def load_more(driver, times=10):
     for _ in range(times):
         try:
@@ -65,6 +67,7 @@ def load_more(driver, times=10):
             break
 
 
+# ===== 記事取得 =====
 def get_articles(driver):
     articles = []
     seen = set()
@@ -97,6 +100,7 @@ def get_new_articles(old, new):
     return [item for item in new if item["url"] not in old_urls]
 
 
+# ===== HTML生成 =====
 def generate_html(data):
     html = """<!DOCTYPE html>
 <html lang="ja">
@@ -122,25 +126,28 @@ a {color:#38bdf8;text-decoration:none;}
         f.write(html)
 
 
-def get_file_url():
-    path = os.path.abspath(HTML_FILE)
-    return "file:///" + urllib.parse.quote(path.replace("\\", "/"))
+# ===== GitHub自動更新 =====
+def push_to_github():
+    subprocess.run("git add .", shell=True)
+    subprocess.run('git commit -m "auto update"', shell=True)
+    subprocess.run("git push", shell=True)
 
 
-def send_discord(file_url, new_articles):
+# ===== Discord通知 =====
+def send_discord(new_articles):
     if not new_articles:
         return
 
-    # タイトル一覧（最大10件）
     titles = "\n".join([f"・{a['title']}" for a in new_articles[:10]])
 
     data = {
-        "content": f"📄 新着 {len(new_articles)} 件！\n\n{titles}\n\n🔗 開く:\n{file_url}"
+        "content": f"📄 新着 {len(new_articles)} 件！\n\n{titles}\n\n🔗 {GITHUB_URL}"
     }
 
     requests.post(WEBHOOK_URL, json=data)
 
 
+# ===== main =====
 def main():
     driver = create_driver()
     driver.get(URL)
@@ -157,8 +164,8 @@ def main():
     save_data(articles)
     generate_html(articles)
 
-    file_url = get_file_url()
-    send_discord(file_url, new_articles)
+    push_to_github()
+    send_discord(new_articles)
 
     driver.quit()
 
